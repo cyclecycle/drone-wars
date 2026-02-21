@@ -4,11 +4,7 @@ export class CameraController {
     private camera: THREE.PerspectiveCamera;
     private domElement: HTMLElement;
 
-    private moveSpeed = 50;
-    private minZoom = 10;
-    private maxZoom = 600;
-
-    private keys = {
+    private moveSpeed = 100; // Increased pan speed
         w: false,
         a: false,
         s: false,
