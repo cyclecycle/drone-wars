@@ -10,7 +10,6 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@types/pathfinding": "^0.1.0",
     "@types/three": "^0.183.1",
     "jsdom": "^28.1.0",
     "typescript": "~5.9.3",
@@ -18,7 +17,6 @@
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "pathfinding": "^0.4.18",
     "three": "^0.183.1"
   }
 }

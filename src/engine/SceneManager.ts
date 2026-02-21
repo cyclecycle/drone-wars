@@ -88,7 +88,7 @@ export class SceneManager {
             this.camera.position.copy(target).add(offset);
         };
 
-        this.pathfindingManager = new PathfindingManager(mapSize, 8); // 8x Tile Size = 64x faster pathfinding
+        this.pathfindingManager = new PathfindingManager(mapSize, 2); // Optimized Custom Pathfinder
         this.projectileManager = new ProjectileManager(this.scene);
 
         this.pathfindingManager = new PathfindingManager(mapSize, 1);
@@ -395,8 +395,12 @@ export class SceneManager {
 
     private setupUnits(): void {
         // Enforcers (North Team)
-        this.units.push(new ScrapDrone(101, new THREE.Vector3(-5, 1, -290)));
-        this.units.push(new ScrapDrone(102, new THREE.Vector3(5, 1, -290)));
+        // Spawn a platoon
+        for (let x = -4; x <= 4; x += 2) {
+            for (let z = -4; z <= 4; z += 2) {
+                this.units.push(new ScrapDrone(100 + x * 10 + z, new THREE.Vector3(x * 2, 1, -290 + z * 2)));
+            }
+        }
         this.units.push(new Peacekeeper(103, new THREE.Vector3(0, 1, -280)));
         this.units.push(new Peacekeeper(104, new THREE.Vector3(5, 1, -280)));
         this.units.push(new Peacekeeper(105, new THREE.Vector3(-5, 1, -280)));
