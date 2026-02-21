@@ -59,7 +59,7 @@ export class ScrapDrone extends Unit {
 
         super(id, group, Faction.Enforcers, 'Scrap Drone');
 
-        this.moveSpeed = 16;
+        this.moveSpeed = 24;
         this.turnSpeed = 10.0;
         this.health = 50;
         this.maxHealth = 50;

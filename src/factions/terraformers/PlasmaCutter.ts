@@ -29,7 +29,7 @@ export class PlasmaCutter extends Unit {
 
         super(id, mesh, Faction.Terraformers, 'Plasma Cutter');
 
-        this.moveSpeed = 18;
+        this.moveSpeed = 27;
         this.turnSpeed = 8.0;
         this.health = 150;
         this.maxHealth = 150;

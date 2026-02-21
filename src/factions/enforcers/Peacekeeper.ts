@@ -57,7 +57,7 @@ export class Peacekeeper extends Unit {
 
         super(id, group, Faction.Enforcers, 'Peacekeeper');
         
-        this.moveSpeed = 20;
+        this.moveSpeed = 30;
         this.turnSpeed = 10.0;
         this.attackRange = 15;
         this.attackDamage = 10;

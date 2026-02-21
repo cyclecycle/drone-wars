@@ -37,7 +37,7 @@ export class SecurityDrone extends Unit {
 
         super(id, group, Faction.Civilians, 'Security Drone');
 
-        this.moveSpeed = 24;
+        this.moveSpeed = 36;
         this.turnSpeed = 15.0;
         this.health = 80;
         this.maxHealth = 80;
@@ -63,7 +63,7 @@ export class SecurityDrone extends Unit {
                 this.shield += this.shieldRegenRate * deltaTime;
                 if (this.shield > this.maxShield) this.shield = this.maxShield;
             }
-            this.moveSpeed = 24;
+            this.moveSpeed = 36;
             this.shieldMesh.visible = this.shield > 0;
         } else {
             // Lose shield
@@ -71,7 +71,7 @@ export class SecurityDrone extends Unit {
                 this.shield -= this.shieldRegenRate * deltaTime;
                 if (this.shield < 0) this.shield = 0;
             }
-            this.moveSpeed = 24 * 0.7;
+            this.moveSpeed = 36 * 0.7;
             this.shieldMesh.visible = this.shield > 0;
         }
 

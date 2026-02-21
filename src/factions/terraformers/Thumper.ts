@@ -24,7 +24,7 @@ export class Thumper extends Unit {
 
         super(id, mesh, Faction.Terraformers, 'Thumper');
 
-        this.moveSpeed = 14;
+        this.moveSpeed = 21;
         this.turnSpeed = 6.0;
         this.health = 250;
         this.maxHealth = 250;
