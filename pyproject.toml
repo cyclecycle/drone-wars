@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "drone-wars-assets"
+version = "0.1.0"
+description = "Asset processing pipeline for Drone Wars"
+authors = ["Copilot"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+rembg = "*"
+pillow = "*"
+onnxruntime = "^1.24.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
