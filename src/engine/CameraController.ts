@@ -5,6 +5,10 @@ export class CameraController {
     private domElement: HTMLElement;
 
     private moveSpeed = 100; // Increased pan speed
+    private minZoom = 10;
+    private maxZoom = 600;
+    
+    private keys = {
         w: false,
         a: false,
         s: false,
