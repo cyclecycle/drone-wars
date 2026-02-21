@@ -56,9 +56,9 @@ export class Peacekeeper extends Unit {
         group.userData = { selectable: true };
 
         super(id, group, Faction.Enforcers, 'Peacekeeper');
-
-        this.moveSpeed = 6;
-        this.turnSpeed = 10.0; // Fast turn
+        
+        this.moveSpeed = 20;
+        this.turnSpeed = 10.0;
         this.attackRange = 15;
         this.attackDamage = 10;
         this.attackCooldown = 0.8;

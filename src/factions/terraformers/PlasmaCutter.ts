@@ -29,7 +29,7 @@ export class PlasmaCutter extends Unit {
 
         super(id, mesh, Faction.Terraformers, 'Plasma Cutter');
 
-        this.moveSpeed = 9;
+        this.moveSpeed = 18;
         this.turnSpeed = 8.0;
         this.health = 150;
         this.maxHealth = 150;
@@ -64,8 +64,8 @@ export class PlasmaCutter extends Unit {
         this.beamMesh.visible = false;
     }
 
-    public update(deltaTime: number) {
-        super.update(deltaTime);
+    public update(deltaTime: number, units: Unit[] = []) {
+        super.update(deltaTime, units);
 
         if (this.beamTarget) {
             const dist = this.mesh.position.distanceTo(this.beamTarget.mesh.position);

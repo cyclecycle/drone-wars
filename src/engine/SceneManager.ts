@@ -84,20 +84,12 @@ export class SceneManager {
         const mapSize = 800;
         this.minimap = new Minimap(this.scene, this.renderer, mapSize, this.camera);
         this.minimap.onNavigate = (target) => {
-            // Move camera so it looks at target
-            // Current Camera pos relative to lookAt (0,0,0) is (0, 120, -200) - (0,0,0) = (0, 120, -200).
-            // Actually initial lookAt was (0,0,-300), pos (0, 120, -200).
-            // Offset = (0, 120, 100).
-
-            // Let's just set X/Z of camera to target X/Z + offset
             const offset = new THREE.Vector3(0, 120, 100);
             this.camera.position.copy(target).add(offset);
-            // Look target is target
-            // We need CameraController to update its internal state if it tracks target?
-            // CameraController tracks camera position.
-            // But if we just move camera, CameraController might be confused if it has internal state.
-            // Let's check CameraController.
         };
+
+        this.pathfindingManager = new PathfindingManager(mapSize, 8); // 8x Tile Size = 64x faster pathfinding
+        this.projectileManager = new ProjectileManager(this.scene);
 
         this.pathfindingManager = new PathfindingManager(mapSize, 1);
         this.projectileManager = new ProjectileManager(this.scene);
@@ -141,46 +133,62 @@ export class SceneManager {
                 .map(mesh => mesh.userData.unit as Unit)
                 .filter(unit => unit !== undefined);
 
-            selectedUnits.forEach(unit => {
-                if (target && target.userData.unit) {
-                    // Attack command
-                    const targetUnit = target.userData.unit as Unit;
-                    if (unit.faction !== targetUnit.faction) {
-                        if (unit instanceof Peacekeeper) {
-                            // Projectile Attack
-                            this.projectileManager.createProjectile(
-                                unit.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)),
-                                targetUnit,
-                                10,
-                                unit.attackDamage
-                            );
-                            console.log(`${unit.name} attacking ${targetUnit.name}`);
-                        } else if (unit instanceof PlasmaCutter) {
-                            // Beam Attack
-                            unit.attack(targetUnit);
-                            console.log(`${unit.name} locked on ${targetUnit.name}`);
-                        }
+            if (selectedUnits.length === 0) return;
+
+            // Check if target is Enemy Unit or Resource
+            const isAttack = target && target.userData.unit && target.userData.unit.faction !== selectedUnits[0].faction; // Assume homogeneous selection for now or primary action
+            const isGather = target && target.userData.resourceNode;
+
+            if (isAttack) {
+                const targetUnit = target!.userData.unit as Unit;
+                selectedUnits.forEach(unit => {
+                    if (unit instanceof Peacekeeper) {
+                        this.projectileManager.createProjectile(
+                            unit.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)),
+                            targetUnit,
+                            30, // Faster projectile
+                            unit.attackDamage
+                        );
+                    } else if (unit instanceof PlasmaCutter) {
+                        unit.attack(targetUnit);
+                    } else if (unit instanceof Thumper && unit.canStomp()) {
+                        // Move closer?
+                        // For now just stomp if close
                     }
-                } else if (target && target.userData.resourceNode) {
-                    // Gather command
-                    if (unit.isWorker) {
-                        const resource = target.userData.resourceNode as ResourceNode;
-                        // Find dropoff
-                        const dropoff = this.buildings.find(b => b.isDropoff && b.faction === unit.faction);
-                        if (dropoff) {
-                            unit.startGathering(resource, dropoff);
-                        } else {
-                            console.log('No dropoff point found for faction: ' + unit.faction);
-                        }
+                });
+            } else if (isGather) {
+                const resource = target!.userData.resourceNode as ResourceNode;
+                // Find dropoff
+                // Optimization: find once
+                const dropoff = this.buildings.find(b => b.isDropoff && b.faction === selectedUnits[0].faction);
+                
+                selectedUnits.forEach(unit => {
+                    if (unit.isWorker && dropoff) {
+                        unit.startGathering(resource, dropoff);
                     }
-                } else {
-                    // Move command
-                    const path = this.pathfindingManager.findPath(unit.mesh.position, point);
+                });
+            } else {
+                // Move Command with Formation
+                const count = selectedUnits.length;
+                const cols = Math.ceil(Math.sqrt(count));
+                const spacing = 3.0;
+
+                selectedUnits.forEach((unit, i) => {
+                    // Simple grid formation offset
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    const offsetX = (col - cols / 2) * spacing;
+                    const offsetZ = (row - cols / 2) * spacing;
+                    
+                    const targetPos = point.clone().add(new THREE.Vector3(offsetX, 0, offsetZ));
+                    
+                    // Validate targetPos walkable? Pathfinding handles it (returns closest valid or path to it)
+                    const path = this.pathfindingManager.findPath(unit.mesh.position, targetPos);
                     if (path.length > 0) {
                         unit.setPath(path);
                     }
-                }
-            });
+                });
+            }
         };
 
         this.interactionManager.onSelectionChanged = (selected: THREE.Object3D[]) => {
@@ -230,14 +238,14 @@ export class SceneManager {
         soilTexture.rotation = Math.PI / 4; // Rotate to break grid alignment
         soilTexture.colorSpace = THREE.SRGBColorSpace;
 
-        const soilMat = new THREE.MeshStandardMaterial({
+        const soilMat = new THREE.MeshStandardMaterial({ 
             map: soilTexture,
             roughness: 0.9,
             metalness: 0.1,
-            color: 0x888888
+            color: 0xffffff // Full brightness
         });
 
-        const planeGeometry = new THREE.PlaneGeometry(size, size, 64, 64); // More segments for vertex displacement if needed
+        const planeGeometry = new THREE.PlaneGeometry(size, size, 64, 64);
         const soilPlane = new THREE.Mesh(planeGeometry, soilMat);
         soilPlane.rotation.x = -Math.PI / 2;
         soilPlane.receiveShadow = true;
@@ -390,6 +398,8 @@ export class SceneManager {
         this.units.push(new ScrapDrone(101, new THREE.Vector3(-5, 1, -290)));
         this.units.push(new ScrapDrone(102, new THREE.Vector3(5, 1, -290)));
         this.units.push(new Peacekeeper(103, new THREE.Vector3(0, 1, -280)));
+        this.units.push(new Peacekeeper(104, new THREE.Vector3(5, 1, -280)));
+        this.units.push(new Peacekeeper(105, new THREE.Vector3(-5, 1, -280)));
 
         // Civilians (South West Team)
         this.units.push(new SecurityDrone(201, new THREE.Vector3(-260, 1, 165)));
@@ -445,7 +455,7 @@ export class SceneManager {
             }
         });
         this.units.forEach(unit => {
-            unit.update(deltaTime);
+            unit.update(deltaTime, this.units);
 
             // Thumper Logic (Auto-Stomp)
             if (unit instanceof Thumper && unit.canStomp()) {

@@ -24,14 +24,14 @@ export class Thumper extends Unit {
 
         super(id, mesh, Faction.Terraformers, 'Thumper');
 
-        this.moveSpeed = 7;
+        this.moveSpeed = 14;
         this.turnSpeed = 6.0;
         this.health = 250;
         this.maxHealth = 250;
     }
 
-    public update(deltaTime: number) {
-        super.update(deltaTime);
+    public update(deltaTime: number, units: Unit[] = []) {
+        super.update(deltaTime, units);
         this.stompTimer += deltaTime;
     }
 

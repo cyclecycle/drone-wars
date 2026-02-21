@@ -44,7 +44,12 @@ export class PathfindingManager {
             return [];
         }
 
-        const path = this.finder.findPath(startX, startY, endX, endY, gridBackup);
+        let path = this.finder.findPath(startX, startY, endX, endY, gridBackup);
+        
+        // Smooth path to remove zig-zags
+        if (path.length > 0) {
+            path = PF.Util.smoothenPath(gridBackup, path);
+        }
 
         // Convert grid coords back to world coords
         return path.map(([x, y]) => {

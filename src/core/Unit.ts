@@ -52,6 +52,11 @@ export class Unit {
 
     public turnSpeed: number = 5.0; // Radians per second
 
+    // Physics
+    protected velocity: THREE.Vector3 = new THREE.Vector3();
+    protected acceleration: THREE.Vector3 = new THREE.Vector3();
+    protected maxForce: number = 20.0;
+
     protected selectionRing: THREE.Mesh;
 
     constructor(id: number, mesh: THREE.Object3D, faction: Faction, name: string = 'Unit') {
@@ -103,57 +108,94 @@ export class Unit {
         // console.log(`Unit ${this.id} path set:`, path);
     }
 
-    public update(deltaTime: number) {
+    public update(deltaTime: number, units: Unit[] = []) {
         if (this.isWorker) {
             this.handleWorkerLogic(deltaTime);
         }
 
-        if (this.path.length === 0) {
-            // Idle logic or finished path
-        } else {
+        this.acceleration.set(0, 0, 0);
+
+        // 1. Path Following (Seek)
+        if (this.path.length > 0) {
             const target = this.path[this.currentTargetIndex];
-            const position = this.mesh.position;
+            // Flatten target y
+            target.y = this.mesh.position.y;
+            
+            const dist = this.mesh.position.distanceTo(target);
 
-            // Calculate direction to target
-            const direction = new THREE.Vector3().subVectors(target, position);
-            direction.y = 0; // Keep movement flat
-            const distance = direction.length();
-
-            if (distance < 0.1) {
-                // Reached node
+            // Waypoint switching
+            if (dist < 1.0) { 
                 this.currentTargetIndex++;
                 if (this.currentTargetIndex >= this.path.length) {
-                    this.path = []; // Reached destination
+                    this.path = []; // Arrived
+                    this.velocity.set(0, 0, 0);
                 }
-            } else {
-                // Move towards target
-                direction.normalize();
-                const step = this.moveSpeed * this.speedMultiplier * deltaTime;
-
-                if (step >= distance) {
-                    // Snap to target if we would overshoot
-                    position.copy(target);
-                    // Also advance to next node immediately so we don't get stuck for a frame
-                    this.currentTargetIndex++;
-                    if (this.currentTargetIndex >= this.path.length) {
-                        this.path = [];
-                    }
-                } else {
-                    position.add(direction.multiplyScalar(step));
-                }
-
-                // Rotate to face direction (Y-axis only)
-                const lookTarget = target.clone();
-                lookTarget.y = this.mesh.position.y;
-
-                const targetRotation = new THREE.Quaternion();
-                const dummy = new THREE.Object3D();
-                dummy.position.copy(this.mesh.position);
-                dummy.lookAt(lookTarget);
-                targetRotation.copy(dummy.quaternion);
-
-                this.mesh.quaternion.slerp(targetRotation, this.turnSpeed * deltaTime);
             }
+
+            if (this.path.length > 0) {
+                // Seek
+                const desired = new THREE.Vector3().subVectors(target, this.mesh.position);
+                desired.y = 0;
+                desired.normalize().multiplyScalar(this.moveSpeed * this.speedMultiplier);
+                
+                const steer = new THREE.Vector3().subVectors(desired, this.velocity);
+                steer.clampLength(0, this.maxForce);
+                this.acceleration.add(steer.multiplyScalar(2.0));
+            }
+        } else {
+            // Friction
+            const friction = this.velocity.clone().multiplyScalar(-5.0);
+            this.acceleration.add(friction);
+        }
+
+        // 2. Separation
+        if (units.length > 0) {
+            const separation = new THREE.Vector3();
+            let count = 0;
+            const separationRadius = 3.5; 
+
+            for (const other of units) {
+                if (other === this) continue;
+                const dist = this.mesh.position.distanceTo(other.mesh.position);
+                if (dist < separationRadius) {
+                    const push = new THREE.Vector3().subVectors(this.mesh.position, other.mesh.position);
+                    push.y = 0;
+                    push.normalize().divideScalar(dist);
+                    separation.add(push);
+                    count++;
+                }
+            }
+
+            if (count > 0) {
+                separation.divideScalar(count).normalize().multiplyScalar(this.moveSpeed * this.speedMultiplier);
+                const steer = new THREE.Vector3().subVectors(separation, this.velocity);
+                steer.clampLength(0, this.maxForce);
+                this.acceleration.add(steer.multiplyScalar(4.0)); // Strong separation
+            }
+        }
+
+        // Integration
+        this.velocity.add(this.acceleration.clone().multiplyScalar(deltaTime));
+        const maxS = this.moveSpeed * this.speedMultiplier;
+        if (this.velocity.length() > maxS) {
+            this.velocity.normalize().multiplyScalar(maxS);
+        }
+
+        const move = this.velocity.clone().multiplyScalar(deltaTime);
+        this.mesh.position.add(move);
+
+        // Rotation
+        if (this.velocity.lengthSq() > 0.5) {
+            const targetRotation = new THREE.Quaternion();
+            const dummy = new THREE.Object3D();
+            dummy.position.copy(this.mesh.position);
+            // Look at point ahead
+            const lookAtPoint = this.mesh.position.clone().add(this.velocity);
+            lookAtPoint.y = this.mesh.position.y; // Lock Y
+            dummy.lookAt(lookAtPoint);
+            targetRotation.copy(dummy.quaternion);
+            
+            this.mesh.quaternion.slerp(targetRotation, this.turnSpeed * deltaTime);
         }
     }
 
